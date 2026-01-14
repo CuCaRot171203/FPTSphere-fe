@@ -1156,6 +1156,7 @@ export default function Step2SubEvents({ onPrev, onNext }) {
         startTime={formData.startTime}
         endTime={formData.endTime}
         selectedRoom={formData.selectedRoom}
+        parentEventId={mainEvent.eventId}
       />
 
       {/* Select Quotation Modal */}

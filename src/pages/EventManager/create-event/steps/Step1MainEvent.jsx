@@ -42,7 +42,7 @@ import dayjs from "dayjs";
 // Import API client để call external location API
 import apiClient from "../../../../services/api.js";
 // Import Events API service để create event
-import { createEvent as createEventAPI } from "../../../../services/events.api.js";
+import { createEvent as createEventAPI, getLocationBookings } from "../../../../services/events.api.js";
 // Import Locations API service
 import { getLocations, searchLocations, createLocation } from "../../../../services/locations.api.js";
 // ========================================
@@ -237,6 +237,8 @@ export default function Step1MainEvent({ onNext }) {
     setSearchTerm("");
   };
 
+  const [locationBookings, setLocationBookings] = useState({}); // key: locationId, value: bookings array
+
   const selectLocation = (loc) => {
     setSelectedLocation(loc);
     setShowLocationModal(false);
@@ -275,6 +277,48 @@ export default function Step1MainEvent({ onNext }) {
       setCreatingLocation(false);
     }
   };
+
+  // Preload bookings for all visible rooms when location modal opens
+  useEffect(() => {
+    const loadBookingsForRooms = async () => {
+      try {
+        const values = form.getFieldsValue();
+        if (!values.startTime || !values.endTime) {
+          setLocationBookings({});
+          return;
+        }
+
+        const start = values.startTime.toISOString();
+        const end = values.endTime.toISOString();
+
+        const bookingsMap = {};
+        await Promise.all(
+          filteredRooms.map(async (room) => {
+            try {
+              const bookings = await getLocationBookings({
+                locationId: room.locationId,
+                startTime: start,
+                endTime: end,
+              });
+              if (bookings && bookings.length > 0) {
+                bookingsMap[room.locationId] = bookings;
+              }
+            } catch (err) {
+              // Ignore per-room errors to avoid breaking whole modal
+              console.error("Failed to load bookings for room", room.locationId, err);
+            }
+          })
+        );
+        setLocationBookings(bookingsMap);
+      } catch (error) {
+        console.error("Failed to preload location bookings:", error);
+      }
+    };
+
+    if (showLocationModal) {
+      loadBookingsForRooms();
+    }
+  }, [showLocationModal, filteredRooms, form]);
 
   // ========================================
   // REGION: SAVE DRAFT
@@ -1327,27 +1371,62 @@ export default function Step1MainEvent({ onNext }) {
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: "12px"
         }}>
-          {filteredRooms.map((room) => (
-            <Card
-              key={room.locationId}
-              hoverable
-              onClick={() => selectLocation(room)}
-              style={{
-                cursor: "pointer",
-                border: selectedLocation?.locationId === room.locationId ? "2px solid #F2721E" : "1px solid #d9d9d9"
-              }}
-            >
-              <Text strong>{room.name}</Text>
-              <br />
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                {room.building} • {room.roomNumber}
-              </Text>
-              <br />
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                Capacity: {room.capacity ?? "N/A"}
-              </Text>
-            </Card>
-          ))}
+          {filteredRooms.map((room) => {
+            const bookings = locationBookings[room.locationId] || [];
+            const firstBooking = bookings[0];
+             const isBlocked = bookings.length > 0;
+
+            return (
+              <Card
+                key={room.locationId}
+                 hoverable={!isBlocked}
+                 onClick={() => {
+                   if (!isBlocked) {
+                     selectLocation(room);
+                   }
+                 }}
+                style={{
+                   cursor: isBlocked ? "not-allowed" : "pointer",
+                  border:
+                    selectedLocation?.locationId === room.locationId
+                       ? "2px solid #F2721E"
+                       : "1px solid #d9d9d9",
+                   opacity: isBlocked ? 0.6 : 1,
+                }}
+              >
+                <Text strong>{room.name}</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  {room.building} • {room.roomNumber}
+                </Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  Capacity: {room.capacity ?? "N/A"}
+                </Text>
+
+                {firstBooking && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: 8,
+                      borderRadius: 6,
+                      background: "#FFF7E6",
+                      border: "1px solid #FFD591",
+                    }}
+                  >
+                    <Text strong style={{ fontSize: "12px", color: "#F2721E" }}>
+                      Booked by: {firstBooking.eventName}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: "11px" }}>
+                      {dayjs(firstBooking.startTime).format("DD/MM/YYYY HH:mm")} -{" "}
+                      {dayjs(firstBooking.endTime).format("HH:mm")}
+                    </Text>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
         )}
       </Modal>

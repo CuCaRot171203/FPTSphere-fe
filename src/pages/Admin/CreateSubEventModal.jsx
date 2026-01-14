@@ -745,6 +745,7 @@ const CreateSubEventModal = ({ open, onCancel, event, onSuccess }) => {
         startTime={formData.startTime}
         endTime={formData.endTime}
         selectedRoom={formData.selectedRoom}
+        parentEventId={event?.eventId}
       />
 
       {/* Select Quotation Modal */}

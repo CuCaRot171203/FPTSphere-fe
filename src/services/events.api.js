@@ -414,6 +414,47 @@ export const createEvent = async (eventData) => {
 };
 
 /**
+ * Get bookings for a specific location in a given time range.
+ *
+ * API: GET /Events/location-bookings?locationId=&startTime=&endTime=&ignoreEventId=&ignoreParentEventId=
+ */
+export const getLocationBookings = async ({
+  locationId,
+  startTime,
+  endTime,
+  ignoreEventId,
+  ignoreParentEventId,
+}) => {
+  if (!locationId || !startTime || !endTime) {
+    throw new Error("locationId, startTime and endTime are required");
+  }
+
+  const params = new URLSearchParams({
+    locationId: String(locationId),
+    startTime: startTime,
+    endTime: endTime,
+  });
+
+  if (ignoreEventId) {
+    params.append("ignoreEventId", String(ignoreEventId));
+  }
+  if (ignoreParentEventId) {
+    params.append("ignoreParentEventId", String(ignoreParentEventId));
+  }
+
+  const res = await apiClient.get(`/Events/location-bookings?${params.toString()}`);
+
+  if (res.status === 200) {
+    if (res.data?.success !== undefined) {
+      return res.data.data || [];
+    }
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  }
+
+  throw new Error(res.data?.message || "Failed to load location bookings");
+};
+
+/**
  * Get events with pagination and filters
  * 
  * API Endpoint: GET /Events

@@ -35,6 +35,8 @@ export default function SelectRoomModal({
   onSelect,
   startTime,
   endTime,
+  parentEventId = null,
+  currentEventId = null,
 }) {
   const [locationMode, setLocationMode] = useState("offline");
   const [offlineType, setOfflineType] = useState("internal");
@@ -102,9 +104,10 @@ export default function SelectRoomModal({
       
       const res = await apiClient.get("/Locations/available", {
         params: {
-          Time: startTimeParam,
-          StartTime: startTimeParam,
-          EndTime: endTimeParam,
+          startTime: startTimeParam,
+          endTime: endTimeParam,
+          ignoreEventId: currentEventId || undefined,
+          ignoreParentEventId: parentEventId || undefined,
         },
       });
 

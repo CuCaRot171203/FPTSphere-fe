@@ -354,7 +354,7 @@ export const getLocationsByBuilding = async (building) => {
 export const getAvailableLocations = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     if (params.startTime) {
       queryParams.append("startTime", params.startTime);
     }
@@ -366,6 +366,12 @@ export const getAvailableLocations = async (params = {}) => {
     }
     if (params.building) {
       queryParams.append("building", params.building);
+    }
+    if (params.ignoreEventId) {
+      queryParams.append("ignoreEventId", params.ignoreEventId.toString());
+    }
+    if (params.ignoreParentEventId) {
+      queryParams.append("ignoreParentEventId", params.ignoreParentEventId.toString());
     }
 
     const response = await apiClient.get(
